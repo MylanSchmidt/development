@@ -140,14 +140,26 @@ document.querySelectorAll('.service-card[data-link]').forEach(function(card) {
   card.addEventListener('click', function(e) {
     // If they clicked on a button or link inside, let that handle itself
     if (e.target.closest('button, a')) return;
-    window.location.href = target;
+    
+    // Check if it's an external link (starts with http:// or https://)
+    if (target.startsWith('http://') || target.startsWith('https://')) {
+      window.open(target, '_blank', 'noopener,noreferrer');
+    } else {
+      window.location.href = target;
+    }
   });
 
   // Keyboard accessibility (Enter / Space)
   card.addEventListener('keydown', function(e) {
     if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('button, a')) {
       e.preventDefault();
-      window.location.href = target;
+      
+      // Check if it's an external link
+      if (target.startsWith('http://') || target.startsWith('https://')) {
+        window.open(target, '_blank', 'noopener,noreferrer');
+      } else {
+        window.location.href = target;
+      }
     }
   });
 
