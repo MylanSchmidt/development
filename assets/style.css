@@ -566,3 +566,30 @@ textarea:focus,input:focus,select:focus{outline:2px solid color-mix(in srgb, var
 .form-wrap select {
   width: 100%;
 }
+
+/* Tighten spacing only where we opt-in with .text-tight */
+.text-tight p {
+  margin-top: .45rem;
+  margin-bottom: .45rem;
+}
+
+.text-tight ul,
+.text-tight ol {
+  margin-top: .5rem;
+  margin-bottom: .75rem;
+}
+
+.text-tight li+li {
+  margin-top: .25rem;
+}
+
+/* Keep headings from creating big vertical gaps */
+.text-tight .h2,
+.text-tight .h3,
+.text-tight .h4,
+.text-tight h2,
+.text-tight h3,
+.text-tight h4 {
+  margin-top: 1.1rem;
+  margin-bottom: .5rem;
+}
