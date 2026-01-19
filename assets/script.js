@@ -195,3 +195,232 @@ document.querySelectorAll('dialog').forEach(dlg => {
   });
 });
 
+
+// ============================================
+// STRIPE PAYMENT LINKS FOR CLASS REGISTRATION
+// ============================================
+
+// Override the existing modal open behavior for class registration
+document.querySelectorAll('[data-open="class-register-modal"]').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    // Prevent the default modal opening
+    e.stopImmediatePropagation();
+    
+    // Get class details
+    const className = this.getAttribute('data-class') || '';
+    const classDate = this.getAttribute('data-date') || '';
+    const paymentLink = this.getAttribute('data-payment-link') || '';
+    
+    // Store in sessionStorage so it persists after Stripe redirect
+    sessionStorage.setItem('selectedClass', JSON.stringify({
+      name: className,
+      date: classDate,
+      paymentLink: paymentLink
+    }));
+    
+    // ALSO store in localStorage as backup
+    localStorage.setItem('pendingClassRegistration', JSON.stringify({
+      name: className,
+      date: classDate,
+      timestamp: Date.now()
+    }));
+    
+    // Update modal content
+    document.getElementById('modal-class-name').textContent = className;
+    document.getElementById('modal-class-date').textContent = classDate;
+    document.getElementById('stripe-payment-button').href = paymentLink;
+    
+    // Store in hidden form fields
+    document.getElementById('form-class-name').value = className;
+    document.getElementById('form-class-date').value = classDate;
+    
+    // Check if returning from payment
+    checkForPaymentReturn();
+    
+    // Open the modal
+    const modal = document.getElementById('class-register-modal');
+    if (modal) modal.showModal();
+  });
+});
+
+// Check if user is returning from Stripe payment
+function checkForPaymentReturn() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams.get('payment');
+  const sessionId = urlParams.get('session_id');
+  
+  if (paymentStatus === 'success' && sessionId) {
+    // Show registration form, hide payment section
+    document.getElementById('payment-required-section').style.display = 'none';
+    document.getElementById('registration-form-section').style.display = 'block';
+    
+    // Store session ID in hidden field
+    document.getElementById('stripe-session-id').value = sessionId;
+    
+    // Try to retrieve class info from sessionStorage first
+    let classData = null;
+    const storedClass = sessionStorage.getItem('selectedClass');
+    
+    if (storedClass) {
+      classData = JSON.parse(storedClass);
+    } else {
+      // Fallback to localStorage
+      const localData = localStorage.getItem('pendingClassRegistration');
+      if (localData) {
+        const parsed = JSON.parse(localData);
+        // Only use if less than 10 minutes old
+        if (Date.now() - parsed.timestamp < 600000) {
+          classData = parsed;
+        }
+      }
+    }
+    
+    if (classData) {
+      // Update modal display
+      const modalClassName = document.getElementById('modal-class-name');
+      const modalClassDate = document.getElementById('modal-class-date');
+      const formClassName = document.getElementById('form-class-name');
+      const formClassDate = document.getElementById('form-class-date');
+      
+      if (modalClassName) modalClassName.textContent = classData.name;
+      if (modalClassDate) modalClassDate.textContent = classData.date;
+      if (formClassName) formClassName.value = classData.name;
+      if (formClassDate) formClassDate.value = classData.date;
+      
+      console.log('✅ Class data restored successfully:', classData);
+    } else {
+      console.error('❌ No class data found - this should not happen');
+    }
+    
+    // Clean up URL without reloading
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+    
+    return true;
+  }
+  
+  // Show payment section, hide registration form
+  document.getElementById('payment-required-section').style.display = 'block';
+  document.getElementById('registration-form-section').style.display = 'none';
+  
+  return false;
+}
+
+// On page load, check if we're returning from payment
+window.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams.get('payment');
+  const sessionId = urlParams.get('session_id');
+  
+  if (paymentStatus === 'success' && sessionId) {
+    // Auto-open the registration modal
+    const modal = document.getElementById('class-register-modal');
+    if (modal) {
+      // Populate the modal first
+      checkForPaymentReturn();
+      // Then open it
+      setTimeout(() => modal.showModal(), 100);
+    }
+  }
+});
+
+// Clean up storage after successful form submission
+document.getElementById('class-registration-form')?.addEventListener('submit', function(e) {
+  // Clear the stored class data after successful submission
+  setTimeout(() => {
+    sessionStorage.removeItem('selectedClass');
+    localStorage.removeItem('pendingClassRegistration');
+  }, 1000);
+  // The existing form handler in script.js will handle the rest
+});
+
+
+// ============================================
+// AUTO-FORMATTING DATE INPUT FOR RESERVE STUDIES
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+  const dateInput = document.getElementById('last-study-date');
+  
+  if (dateInput) {
+    dateInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, ''); // Remove non-numeric characters
+      let formattedValue = '';
+
+      if (value.length > 0) {
+        // Month Logic (limit to 1-12)
+        let month = value.substring(0, 2);
+        if (month.length === 1) {
+          // If first digit is 2-9, it must be a single digit month (02-09)
+          if (parseInt(month) > 1) {
+            month = '0' + month;
+            value = month + value.substring(1);
+          }
+        } else if (month.length === 2) {
+          // Validate month is between 01-12
+          let monthNum = parseInt(month);
+          if (monthNum > 12) {
+            month = '12'; // Cap at 12
+            value = month + value.substring(2);
+          } else if (monthNum === 0) {
+            month = '01'; // Minimum of 01
+            value = month + value.substring(2);
+          }
+        }
+        
+        if (month.length === 2) {
+          formattedValue += month + '/';
+        } else {
+          formattedValue += month;
+        }
+
+        // Day Logic (limit to 1-31)
+        if (value.length > 2) {
+          let day = value.substring(2, 4);
+          if (day.length === 1) {
+            // If first digit is 4-9, it must be single digit day (04-09)
+            if (parseInt(day) > 3) {
+              day = '0' + day;
+              value = value.substring(0, 2) + day + value.substring(3);
+            }
+          } else if (day.length === 2) {
+            // Validate day is between 01-31
+            let dayNum = parseInt(day);
+            if (dayNum > 31) {
+              day = '31'; // Cap at 31
+              value = value.substring(0, 2) + day + value.substring(4);
+            } else if (dayNum === 0) {
+              day = '01'; // Minimum of 01
+              value = value.substring(0, 2) + day + value.substring(4);
+            }
+          }
+          
+          if (day.length === 2) {
+            formattedValue += day + '/';
+          } else {
+            formattedValue += day;
+          }
+        }
+
+        // Year Logic
+        if (value.length > 4) {
+          let year = value.substring(4, 8);
+          formattedValue += year;
+        }
+      }
+
+      e.target.value = formattedValue;
+    });
+
+    // Handle backspace properly to prevent getting stuck on slashes
+    dateInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Backspace') {
+        const val = e.target.value;
+        if (val.endsWith('/')) {
+          e.preventDefault();
+          e.target.value = val.substring(0, val.length - 1);
+        }
+      }
+    });
+  }
+});
