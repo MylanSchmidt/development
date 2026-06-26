@@ -125,7 +125,7 @@ document.querySelectorAll('form.stack').forEach(form => {
 
 
 // Make service cards clickable as full tiles, while keeping buttons functional
-document.querySelectorAll('.service-card[data-link]').forEach(function(card) {
+document.querySelectorAll('.service-card[data-link], .speaker-card[data-link]').forEach(function(card) {
   var target = card.getAttribute('data-link');
   if (!target) return;
 
@@ -161,7 +161,7 @@ document.querySelectorAll('.service-card[data-link]').forEach(function(card) {
   card.setAttribute('role', 'link');
   var heading = card.querySelector('h3');
   if (heading && heading.textContent) {
-    card.setAttribute('aria-label', heading.textContent.trim() + ' – learn more');
+    card.setAttribute('aria-label', heading.textContent.trim() + (card.classList.contains('speaker-card') ? ' – view presentation PDF' : ' – learn more'));
   }
 });
 
@@ -483,3 +483,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Homepage Board & Breakfast follow-up prompt
+(function () {
+  const eventFloat = document.getElementById('homepage-event-float');
+  if (!eventFloat) return;
+
+  const closeButtons = eventFloat.querySelectorAll('[data-event-float-close]');
+  const focusTarget = eventFloat.querySelector('.event-float-close');
+
+  function openEventFloat() {
+    eventFloat.removeAttribute('hidden');
+    document.body.classList.add('event-float-open');
+    setTimeout(() => focusTarget?.focus({ preventScroll: true }), 50);
+  }
+
+  function closeEventFloat() {
+    eventFloat.setAttribute('hidden', '');
+    document.body.classList.remove('event-float-open');
+  }
+
+  closeButtons.forEach(button => button.addEventListener('click', closeEventFloat));
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !eventFloat.hasAttribute('hidden')) closeEventFloat();
+  });
+
+  window.addEventListener('DOMContentLoaded', function () {
+    setTimeout(openEventFloat, 650);
+  });
+})();
+
